@@ -3,7 +3,7 @@ require 'RSpec'
 
 # yeah, could use a lot more tests
 
-RSpec.describe SimCtl do
+RSpec.describe "SimCtl Module" do
 	unique_name = "UnitTest.Device.SimCtl"
 
 	it 'does not have a device with this name' do

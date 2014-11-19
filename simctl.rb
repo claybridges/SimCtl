@@ -1,5 +1,5 @@
 
-class SimCtl
+module SimCtl
 
     class SimDevice
     end
@@ -42,6 +42,8 @@ class SimCtl::SimDevice
     end
 
     def builtin?
+        # this is kind of unperformant. .device_types will probably very rarely ever change,
+        # so we could cache it.
         types = SimCtl.device_types.values.map {|t| t.name}
         types.include? name
     end
@@ -67,8 +69,10 @@ end
 
 # SimCtl main methods
 
-class SimCtl
-    def self.runtimes
+module SimCtl
+    module_function
+
+    def runtimes
         hash = {}
     
         SimCtl.cmd('list runtimes').lines.each do |l|
@@ -92,7 +96,7 @@ class SimCtl
     end
 
     # e.g. device line like "    iPhone 4s (4F61DADF-CB4E-483A-B52A-1FA6EC0E2147) (Shutdown)\n"
-    def self.devices
+    def devices
         devices = []
         present_runtime_name = nil
 
@@ -120,11 +124,11 @@ class SimCtl
         devices.freeze
     end
 
-    def self.devices_with_runtime(runtime)
+    def devices_with_runtime(runtime)
         get_devices.select { |x| x.runtime_name == runtime.name}
     end
 
-    def self.device_types
+    def device_types
         device_types = {}
 
         SimCtl.cmd('list devicetypes').lines.each do |l|
@@ -144,7 +148,7 @@ class SimCtl
     end
 
     # create        Create a new device.
-    def self.create(name, device_type_name='iPhone 6', runtime_name='iOS 8.1', avoid_conflict: true)
+    def create(name, device_type_name='iPhone 6', runtime_name='iOS 8.1', avoid_conflict: true)
         if avoid_conflict then
             conflicts = devices.find { |d| d.name == name && d.runtime_name == runtime_name }
             raise "conflict detected for creating device #{runtime_name}/#{name}" if conflicts
@@ -172,7 +176,7 @@ class SimCtl
     end
 
     # Right now, raises exception on more than one. Don't like it. Don't have better idea.
-    def self.find_unique_device(name)
+    def find_unique_device(name)
         devs = SimCtl.devices.select {|d| d.name == name}
 
         case devs.length
@@ -188,7 +192,7 @@ class SimCtl
     end
 
     # Figure this will be the goto method in testing
-    def self.create_or_find(name)
+    def create_or_find(name)
         d = find_unique_device(name)
         if d.nil? then
             d = create(name)
@@ -196,13 +200,14 @@ class SimCtl
         d
     end
 
-
     # delete("MyName")      -- deletes single unique device of name "MyName". If 0 or >1 device of that
     #                          name then will exception.
     # delete(device_object) -- calls device_object.delete
     # delete(array)         -- calls itself recursively for each item in array
+    #
+    # Will on delete builtin Devices when passed the named parameter `builtin_protection: false`
 
-    def self.delete(device_or_devices, builtin_protection: true)
+    def delete(device_or_devices, builtin_protection: true)
         case device_or_devices
         when SimCtl::SimDevice
             device_or_devices.delete(builtin_protection: builtin_protection)
